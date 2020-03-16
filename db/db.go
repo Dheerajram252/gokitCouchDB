@@ -13,13 +13,18 @@ type DB struct {
 	*kivik.DB
 }
 
-func NewClient(driverName, dataSourceName, dbName string) (DB, error) {
+type DatabaseInterface interface {
+	GetDocument(ctx context.Context, docID string) (interface{}, error)
+	PutDocument(ctx context.Context) (flag bool, err error)
+}
+
+func NewClient(driverName, dataSourceName, dbName string) (DatabaseInterface, error) {
 	client, err := kivik.New(driverName, dataSourceName)
 	if err != nil {
 		return DB{}, err
 	}
 	database := client.DB(context.TODO(), dbName)
-	return DB{database}, database.Err()
+	return DB{database}, nil
 }
 
 type document struct {
@@ -31,7 +36,7 @@ type dBDoc struct {
 	Name string `json:"name,omitempty"`
 }
 
-func (db DB) GetDocument(ctx context.Context, docID string) (document, error) {
+func (db DB) GetDocument(ctx context.Context, docID string) (interface{}, error) {
 	row := db.Get(ctx, docID)
 	var doc document
 	err := row.ScanDoc(&doc)

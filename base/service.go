@@ -2,7 +2,6 @@ package base
 
 import (
 	"context"
-	"gokitCouchDB/db"
 )
 
 type Service interface {
@@ -12,10 +11,10 @@ type Service interface {
 }
 
 type baseService struct {
-	databases *db.RoundRobin
+	databases *RoundRobin
 }
 
-func NewService(roundRobin *db.RoundRobin) Service {
+func NewService(roundRobin *RoundRobin) Service {
 	return &baseService{databases: roundRobin}
 }
 

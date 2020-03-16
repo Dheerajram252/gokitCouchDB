@@ -3,6 +3,7 @@ package base
 import (
 	"context"
 	"github.com/go-kit/kit/metrics"
+	"gokitCouchDB/db"
 	"net/http"
 	"strconv"
 	"time"
@@ -99,4 +100,40 @@ func (t transportServerFinalizerInstrument) TransportServerFinalizer(ctx context
 	if len(t.labelNames) > 1 {
 		t.requestLatency.With(t.labelNames[0], r.URL.RequestURI(), t.labelNames[1], strconv.Itoa(code)).Observe(time.Since(startTime(ctx)).Seconds())
 	}
+}
+
+type DBInstrumentingMiddleware func(db.DatabaseInterface) db.DatabaseInterface
+
+type dbInstrumentingService struct {
+	instrumenter instrumenter
+	next         db.DatabaseInterface
+}
+
+func NewDBInstrumentingService(labelNames []string, counter metrics.Counter, errCounter metrics.Counter, latencySummary metrics.Histogram, histogram metrics.Histogram) DBInstrumentingMiddleware {
+	return func(next db.DatabaseInterface) db.DatabaseInterface {
+		return dbInstrumentingService{
+			instrumenter: instrumenter{
+				labelNames:            labelNames,
+				requestCount:          counter,
+				errCount:              errCounter,
+				requestLatency:        histogram,
+				requestLatencySummary: latencySummary,
+			},
+			next: next,
+		}
+	}
+}
+
+func (db dbInstrumentingService) GetDocument(ctx context.Context, docID string) (res interface{}, err error) {
+	defer func(begin time.Time, err error) {
+		db.instrumenter.instrument(begin, "GetDocument", err)
+	}(time.Now(), err)
+	return db.next.GetDocument(ctx, docID)
+}
+
+func (db dbInstrumentingService) PutDocument(ctx context.Context) (flag bool, err error) {
+	defer func(begin time.Time, err error) {
+		db.instrumenter.instrument(begin, "GetDocument", err)
+	}(time.Now(), err)
+	return db.next.PutDocument(ctx)
 }

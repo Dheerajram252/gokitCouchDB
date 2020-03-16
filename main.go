@@ -13,7 +13,6 @@ import (
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gokitCouchDB/base"
-	"gokitCouchDB/db"
 	"log/syslog"
 	"net/http"
 	"os"
@@ -157,7 +156,7 @@ func initRegister(logger log.Logger) (*api.Client, sd.Registrar, error) {
 	return base.Register(register, logger)
 }
 
-func initDatabases(client *api.Client, logger log.Logger) *db.RoundRobin {
+func initDatabases(client *api.Client, logger log.Logger) *base.RoundRobin {
 	dbInstancer := consul.NewInstancer(
 		consul.NewClient(client),
 		logger,
@@ -165,10 +164,10 @@ func initDatabases(client *api.Client, logger log.Logger) *db.RoundRobin {
 		[]string{},
 		true,
 	)
-	return db.NewRoundRobin(dbInstancer, *dbName, *dbType)
+	return base.NewRoundRobin(dbInstancer, *dbName, *dbType, *serviceGroup, *version)
 }
 
-func initService(logger log.Logger, dbs *db.RoundRobin) base.Service {
+func initService(logger log.Logger, dbs *base.RoundRobin) base.Service {
 	labelNames := []string{"method"}
 	constLabels := map[string]string{"serviceName": *basePath, "serviceGroup": *serviceGroup, "version": *version, "dataType": *dataType}
 
